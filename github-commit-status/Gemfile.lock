@@ -2,6 +2,8 @@ PATH
   remote: .
   specs:
     github-commit-status (0.1.0)
+      dotenv
+      faraday-retry
       octokit
 
 GEM
@@ -9,10 +11,13 @@ GEM
   specs:
     addressable (2.8.4)
       public_suffix (>= 2.0.2, < 6.0)
+    dotenv (2.8.1)
     faraday (2.7.10)
       faraday-net_http (>= 2.0, < 3.1)
       ruby2_keywords (>= 0.0.4)
     faraday-net_http (3.0.2)
+    faraday-retry (2.2.0)
+      faraday (~> 2.0)
     octokit (4.25.1)
       faraday (>= 1, < 3)
       sawyer (~> 0.9)
