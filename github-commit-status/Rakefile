@@ -1,0 +1,8 @@
+require "bundler/gem_tasks"
+require "./lib/github/commit/status"
+
+task :commit_status do
+  Github::Commit::Status::Script.new.run
+end
+
+task :default => :spec
