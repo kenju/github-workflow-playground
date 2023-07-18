@@ -17,10 +17,16 @@ module Github
           client = ::Octokit::Client.new(access_token: access_token)
 
           repo = 'kenju/github-workflow-playground'
-          commit = '4361929'
-          sha = client.commit(repo, commit).sha
+          branch = "master"
+
+          commits = client.commits(repo, branch, {
+            per_page: 1,
+            page: 1,
+          })
+          sha = commits.first.sha
+
           # error / failure / pending / success
-          state = 'error'
+          state = 'success'
           # https://docs.github.com/en/rest/commits/statuses?apiVersion=2022-11-28#create-a-commit-status
           options = {
             context: 'fake',
