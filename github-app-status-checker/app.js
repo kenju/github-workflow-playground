@@ -98,29 +98,31 @@ app.webhooks.on("check_suite", async ({ octokit, payload }) => {
   if (payload.action === "requested" || payload.action === "rerequested") {
     console.log("check_suite (re)requested");
 
-    const owner = payload.repository.owner.login
-    const repo = payload.repository.name
-    const head_sha = payload.check_suite ? payload.check_suite.head_sha : payload.check_run.head_sha
+    const owner = payload.repository.owner.login;
+    const repo = payload.repository.name;
+    const head_sha = payload.check_suite
+      ? payload.check_suite.head_sha
+      : payload.check_run.head_sha;
     // queued / in_progress / completed
-    const status = 'queued'
-    console.log(`Creating check run for ${owner}/${repo} (${head_sha})...`)
+    const status = "queued";
+    console.log(`Creating check run for ${owner}/${repo} (${head_sha})...`);
 
     try {
-    await octokit.request("POST /repos/{owner}/{repo}/check-runs", {
-      owner,
-      repo,
-      name: "GitHub Status Checker",
-      head_sha,
-      status,
-      output: {
-        title: "Mighty Readme report",
-        summary: "Summary comes here",
-        text: "Text comes here",
-      },
-      headers: {
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-    });
+      await octokit.request("POST /repos/{owner}/{repo}/check-runs", {
+        owner,
+        repo,
+        name: "GitHub Status Checker",
+        head_sha,
+        status,
+        output: {
+          title: "Mighty Readme report",
+          summary: "Summary comes here",
+          text: "Text comes here",
+        },
+        headers: {
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+      });
     } catch (error) {
       if (error.response) {
         console.error(
