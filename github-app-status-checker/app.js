@@ -98,11 +98,17 @@ app.webhooks.on("check_suite", async ({ octokit, payload }) => {
   if (payload.action === "requested" || payload.action === "rerequested") {
     console.log("check_suite (re)requested");
 
+    const owner = payload.repository.owner.login
+    const repo = payload.repository.name
+    const head_sha = payload.check_suite ? payload.check_suite.head_sha : payload.check_run.head_sha
+    console.log(`Creating check run for ${owner}/${repo} (${head_sha})...`)
+
+    try {
     await octokit.request("POST /repos/{owner}/{repo}/check-runs", {
-      owner: payload.repository.owner,
-      repo: payload.repository.name,
+      owner,
+      repo,
       name: "GitHub Status Checker",
-      head_sha: payload.check_suite ? payload.check_suite.head_sha : payload.check_run.head_sha,
+      head_sha,
       status: "in_progress",
       output: {
         title: "Mighty Readme report",
@@ -113,6 +119,15 @@ app.webhooks.on("check_suite", async ({ octokit, payload }) => {
         "X-GitHub-Api-Version": "2022-11-28",
       },
     });
+    } catch (error) {
+      if (error.response) {
+        console.error(
+          `Error! Status: ${error.response.status}. Message: ${error.response.data.message}`
+        );
+      } else {
+        console.error(error);
+      }
+    }
   } else {
     console.log("check_suite completed");
   }
