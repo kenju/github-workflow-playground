@@ -136,13 +136,12 @@ app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
     `Received a pull request labeled event for #${payload.pull_request.number}`
   );
   try {
-    const response = await updateCheckRun({
+    await updateCheckRun({
       octokit,
       payload,
       head_sha: payload.pull_request.head.sha,
       status: "in_progress",
     });
-    console.log(response)
   } catch (error) {
     handleGithubEventError(error)
   }
@@ -174,12 +173,13 @@ app.webhooks.on("check_suite", async ({ octokit, payload }) => {
       : payload.check_run.head_sha;
 
     try {
-      await createCheckRun({
+      const response = await createCheckRun({
         octokit,
         payload,
         head_sha,
         status: "queued",
       })
+      console.log(response)
     } catch (error) {
       handleGithubEventError(error)
     }
