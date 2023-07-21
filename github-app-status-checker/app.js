@@ -78,7 +78,7 @@ async function createCheckRun({ octokit, payload, head_sha, status }) {
   const owner = payload.repository.owner.login;
   const repo = payload.repository.name;
 
-  await octokit.request("PATCH /repos/{owner}/{repo}/check-runs", {
+  await octokit.request("POST /repos/{owner}/{repo}/check-runs", {
     owner,
     repo,
     name: "GitHub Status Checker",
