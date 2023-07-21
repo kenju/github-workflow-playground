@@ -79,26 +79,7 @@ async function upsertCheckRunID({ octokit, payload }) {
   return checkRun.id;
 }
 
-async function updateCommitStatus({
-  octokit,
-  payload,
-  sha,
-  state = "success",
-}) {
-  return await octokit.request("POST /repos/{owner}/{repo}/statuses/{sha}", {
-    owner: payload.repository.owner.login,
-    repo: payload.repository.name,
-    sha,
-    state,
-    description: "Description!",
-    context: "GitHub Apps!",
-    headers: {
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
-  });
-}
-
-async function createCheckRun({ octokit, payload, head_sha, status }) {
+async function createCheckRun({ octokit, payload, head_sha }) {
   const owner = payload.repository.owner.login;
   const repo = payload.repository.name;
 
@@ -107,7 +88,7 @@ async function createCheckRun({ octokit, payload, head_sha, status }) {
     repo,
     name: "GitHub Status Checker",
     head_sha,
-    status,
+    status: "queued",
     output: {
       title: "Mighty Readme report",
       summary: "Summary comes here",
@@ -119,23 +100,17 @@ async function createCheckRun({ octokit, payload, head_sha, status }) {
   });
 }
 
-async function updateCheckRunInProgress({ octokit, payload, check_run_id }) {
+async function updateCheckRun({ octokit, payload, check_run_id, status }) {
   const owner = payload.repository.owner.login;
   const repo = payload.repository.name;
-
-  let checkRunID = check_run_id;
-  if (typeof check_run_id === "undefined") {
-    checkRunID = await upsertCheckRunID({ octokit, payload });
-  }
-  console.log(checkRunID, check_run_id);
 
   return await octokit.request(
     "PATCH /repos/{owner}/{repo}/check-runs/{check_run_id}",
     {
       owner,
       repo,
-      check_run_id: checkRunID,
-      status: "in_progress",
+      check_run_id,
+      status,
       output: {
         title: "Mighty Readme report",
         summary: "Summary comes here",
@@ -152,17 +127,12 @@ async function updateCheckRunCompleted({ octokit, payload, check_run_id }) {
   const owner = payload.repository.owner.login;
   const repo = payload.repository.name;
 
-  let checkRunID = check_run_id;
-  if (typeof check_run_id === "undefined") {
-    checkRunID = await upsertCheckRunID({ octokit, payload });
-  }
-
   return await octokit.request(
     "PATCH /repos/{owner}/{repo}/check-runs/{check_run_id}",
     {
       owner,
       repo,
-      check_run_id: checkRunID,
+      check_run_id,
       status: "completed",
       // Can be one of: action_required, cancelled, failure, neutral, success, skipped, stale, timed_out
       conclusion: "success", // required when completed
@@ -194,12 +164,31 @@ app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
 });
 
 app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
+  const labelName = payload.label.name
+  let checkRunID = database.check_run_id;
+
   try {
-    await updateCheckRunInProgress({
-      octokit,
-      payload,
-      check_run_id: database.checkRunID,
-    });
+    if (typeof check_run_id === "undefined") {
+      checkRunID = await upsertCheckRunID({ octokit, payload });
+    }
+
+    if (labelName === 'in_progress') {
+      await updateCheckRun({
+        octokit,
+        payload,
+        check_run_id: checkRunID,
+        status: labelName,
+      });
+    } else if (labelName === 'queued') {
+      await updateCheckRunQueued({
+        octokit,
+        payload,
+        check_run_id: checkRunID,
+        status: labelName,
+      });
+    } else if (labelName === 'rerequested') {
+      // TODO
+    }
   } catch (error) {
     handleGithubEventError(error);
   }
@@ -228,7 +217,6 @@ app.webhooks.on("check_suite", async ({ octokit, payload }) => {
         octokit,
         payload,
         head_sha,
-        status: "queued",
       });
       database.checkRunID = response.data.id;
     } catch (error) {
