@@ -15,6 +15,10 @@ const secret = process.env.WEBHOOK_SECRET;
 const enterpriseHostname = process.env.ENTERPRISE_HOSTNAME;
 const messageForNewPRs = fs.readFileSync("./message.md", "utf8");
 
+const database = {
+  check_run_id: undefined,
+}
+
 // Create an authenticated Octokit client authenticated as a GitHub App
 const app = new App({
   appId,
@@ -70,11 +74,32 @@ async function updateCommitStatus({
   });
 }
 
+async function createCheckRun({ octokit, payload, head_sha, status }) {
+  const owner = payload.repository.owner.login;
+  const repo = payload.repository.name;
+
+  await octokit.request("PATCH /repos/{owner}/{repo}/check-runs", {
+    owner,
+    repo,
+    name: "GitHub Status Checker",
+    head_sha,
+    status,
+    output: {
+      title: "Mighty Readme report",
+      summary: "Summary comes here",
+      text: "Text comes here",
+    },
+    headers: {
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+  });
+}
+
 async function updateCheckRun({ octokit, payload, head_sha, status }) {
   const owner = payload.repository.owner.login;
   const repo = payload.repository.name;
 
-  await octokit.request("POST /repos/{owner}/{repo}/check-runs", {
+  await octokit.request("PATCH /repos/{owner}/{repo}/check-runs", {
     owner,
     repo,
     name: "GitHub Status Checker",
@@ -122,12 +147,13 @@ app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
     `Received a pull request labeled event for #${payload.pull_request.number}`
   );
   try {
-    await updateCheckRun({
+    const response = await updateCheckRun({
       octokit,
       payload,
       head_sha: payload.pull_request.head.sha,
       status: "queued",
     });
+    console.log(response)
   } catch (error) {
     handleGithubEventError(error)
   }
@@ -154,31 +180,17 @@ app.webhooks.on("check_suite", async ({ octokit, payload }) => {
   if (payload.action === "requested" || payload.action === "rerequested") {
     console.log("check_suite (re)requested");
 
-    const owner = payload.repository.owner.login;
-    const repo = payload.repository.name;
     const head_sha = payload.check_suite
       ? payload.check_suite.head_sha
       : payload.check_run.head_sha;
-    // queued / in_progress / completed
-    const status = "completed";
-    console.log(`Creating check run for ${owner}/${repo} (${head_sha})...`);
 
     try {
-      await octokit.request("POST /repos/{owner}/{repo}/check-runs", {
-        owner,
-        repo,
-        name: "GitHub Status Checker",
+      await createCheckRun({
+        octokit,
+        payload,
         head_sha,
-        status,
-        output: {
-          title: "Mighty Readme report",
-          summary: "Summary comes here",
-          text: "Text comes here",
-        },
-        headers: {
-          "X-GitHub-Api-Version": "2022-11-28",
-        },
-      });
+        status: "completed",
+      })
     } catch (error) {
       handleGithubEventError(error)
     }
