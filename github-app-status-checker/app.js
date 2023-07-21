@@ -32,19 +32,37 @@ const app = new App({
 // Optional: Get & log the authenticated app's name
 const { data } = await app.octokit.request('/app')
 
+async function postMessageForPRs({ octokit, payload }) {
+  await octokit.rest.issues.createComment({
+    owner: payload.repository.owner.login,
+    repo: payload.repository.name,
+    issue_number: payload.pull_request.number,
+    body: messageForNewPRs
+  })
+}
+
+async function updateCommitStatus({ octokit, payload }) {
+  await octokit.request('POST /repos/{owner}/{repo}/statuses/{sha}', {
+    owner: payload.repository.owner.login,
+    repo: payload.repository.name,
+    sha: '5e69755d3a9f357a510d774aeab3f5e7a331cb64',
+    state: 'success',
+    description: 'The build succeeded!',
+    context: 'GitHub Apps!',
+    headers: {
+      'X-GitHub-Api-Version': '2022-11-28'
+    }
+  })
+}
+
 // Read more about custom logging: https://github.com/octokit/core.js#logging
 app.octokit.log.debug(`Authenticated as '${data.name}'`)
 
 // Subscribe to the "pull_request.opened" webhook event
 app.webhooks.on('pull_request.opened', async ({ octokit, payload }) => {
-  console.log(`Received a pull request event for #${payload.pull_request.number}`)
+  console.log(`Received a pull request opened event for #${payload.pull_request.number}`)
   try {
-    await octokit.rest.issues.createComment({
-      owner: payload.repository.owner.login,
-      repo: payload.repository.name,
-      issue_number: payload.pull_request.number,
-      body: messageForNewPRs
-    })
+    await postMessageForPRs({ octokit, payload })
   } catch (error) {
     if (error.response) {
       console.error(`Error! Status: ${error.response.status}. Message: ${error.response.data.message}`)
@@ -55,14 +73,9 @@ app.webhooks.on('pull_request.opened', async ({ octokit, payload }) => {
 })
 
 app.webhooks.on('pull_request.reopened', async ({ octokit, payload }) => {
-  console.log(`Received a pull request event for #${payload.pull_request.number}`)
+  console.log(`Received a pull request reopened event for #${payload.pull_request.number}`)
   try {
-    await octokit.rest.issues.createComment({
-      owner: payload.repository.owner.login,
-      repo: payload.repository.name,
-      issue_number: payload.pull_request.number,
-      body: messageForNewPRs
-    })
+    await postMessageForPRs({ octokit, payload })
   } catch (error) {
     if (error.response) {
       console.error(`Error! Status: ${error.response.status}. Message: ${error.response.data.message}`)
@@ -70,6 +83,20 @@ app.webhooks.on('pull_request.reopened', async ({ octokit, payload }) => {
       console.error(error)
     }
   }
+})
+
+app.webhooks.on('check_suite', async ({ octokit, payload }) => {
+  console.log(`Received a check_suite`)
+  console.log(payload)
+  // try {
+  //   await postMessageForPRs({ octokit, payload })
+  // } catch (error) {
+  //   if (error.response) {
+  //     console.error(`Error! Status: ${error.response.status}. Message: ${error.response.data.message}`)
+  //   } else {
+  //     console.error(error)
+  //   }
+  // }
 })
 
 // Optional: Handle errors
