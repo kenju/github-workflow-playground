@@ -41,14 +41,50 @@ async function postMessageForPRs({ octokit, payload }) {
   });
 }
 
-async function updateCommitStatus({ octokit, payload }) {
+function handleGithubEventError(error) {
+  if (error.response) {
+    console.error(
+      `Error! Status: ${error.response.status}. Message: ${error.response.data.message}`
+    );
+  } else {
+    console.error(error);
+  }
+}
+
+async function updateCommitStatus({
+  octokit,
+  payload,
+  sha,
+  state = "success",
+}) {
   await octokit.request("POST /repos/{owner}/{repo}/statuses/{sha}", {
     owner: payload.repository.owner.login,
     repo: payload.repository.name,
-    sha: "5e69755d3a9f357a510d774aeab3f5e7a331cb64",
-    state: "success",
-    description: "The build succeeded!",
+    sha,
+    state,
+    description: "Description!",
     context: "GitHub Apps!",
+    headers: {
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+  });
+}
+
+async function updateCheckRun({ octokit, payload, head_sha, status }) {
+  const owner = payload.repository.owner.login;
+  const repo = payload.repository.name;
+
+  await octokit.request("POST /repos/{owner}/{repo}/check-runs", {
+    owner,
+    repo,
+    name: "GitHub Status Checker",
+    head_sha,
+    status,
+    output: {
+      title: "Mighty Readme report",
+      summary: "Summary comes here",
+      text: "Text comes here",
+    },
     headers: {
       "X-GitHub-Api-Version": "2022-11-28",
     },
@@ -66,13 +102,7 @@ app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
   try {
     await postMessageForPRs({ octokit, payload });
   } catch (error) {
-    if (error.response) {
-      console.error(
-        `Error! Status: ${error.response.status}. Message: ${error.response.data.message}`
-      );
-    } else {
-      console.error(error);
-    }
+    handleGithubEventError(error)
   }
 });
 
@@ -83,13 +113,39 @@ app.webhooks.on("pull_request.reopened", async ({ octokit, payload }) => {
   try {
     await postMessageForPRs({ octokit, payload });
   } catch (error) {
-    if (error.response) {
-      console.error(
-        `Error! Status: ${error.response.status}. Message: ${error.response.data.message}`
-      );
-    } else {
-      console.error(error);
-    }
+    handleGithubEventError(error)
+  }
+});
+
+app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
+  console.log(
+    `Received a pull request labeled event for #${payload.pull_request.number}`
+  );
+  try {
+    await updateCheckRun({
+      octokit,
+      payload,
+      head_sha: payload.pull_request.head.sha,
+      status: "queued",
+    });
+  } catch (error) {
+    handleGithubEventError(error)
+  }
+});
+
+app.webhooks.on("pull_request.unlabeled", async ({ octokit, payload }) => {
+  console.log(
+    `Received a pull request unlabeled event for #${payload.pull_request.number}`
+  );
+  try {
+    await updateCheckRun({
+      octokit,
+      payload,
+      head_sha: payload.pull_request.head.sha,
+      status: "in_progress",
+    });
+  } catch (error) {
+    handleGithubEventError(error)
   }
 });
 
@@ -104,7 +160,7 @@ app.webhooks.on("check_suite", async ({ octokit, payload }) => {
       ? payload.check_suite.head_sha
       : payload.check_run.head_sha;
     // queued / in_progress / completed
-    const status = "queued";
+    const status = "completed";
     console.log(`Creating check run for ${owner}/${repo} (${head_sha})...`);
 
     try {
@@ -124,13 +180,7 @@ app.webhooks.on("check_suite", async ({ octokit, payload }) => {
         },
       });
     } catch (error) {
-      if (error.response) {
-        console.error(
-          `Error! Status: ${error.response.status}. Message: ${error.response.data.message}`
-        );
-      } else {
-        console.error(error);
-      }
+      handleGithubEventError(error)
     }
   } else {
     console.log("check_suite completed");
