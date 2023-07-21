@@ -131,17 +131,6 @@ app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
   }
 });
 
-app.webhooks.on("pull_request.reopened", async ({ octokit, payload }) => {
-  console.log(
-    `Received a pull request reopened event for #${payload.pull_request.number}`
-  );
-  try {
-    await postMessageForPRs({ octokit, payload });
-  } catch (error) {
-    handleGithubEventError(error)
-  }
-});
-
 app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
   console.log(
     `Received a pull request labeled event for #${payload.pull_request.number}`
