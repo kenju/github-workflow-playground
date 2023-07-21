@@ -54,6 +54,24 @@ app.webhooks.on('pull_request.opened', async ({ octokit, payload }) => {
   }
 })
 
+app.webhooks.on('pull_request.reopened', async ({ octokit, payload }) => {
+  console.log(`Received a pull request event for #${payload.pull_request.number}`)
+  try {
+    await octokit.rest.issues.createComment({
+      owner: payload.repository.owner.login,
+      repo: payload.repository.name,
+      issue_number: payload.pull_request.number,
+      body: messageForNewPRs
+    })
+  } catch (error) {
+    if (error.response) {
+      console.error(`Error! Status: ${error.response.status}. Message: ${error.response.data.message}`)
+    } else {
+      console.error(error)
+    }
+  }
+})
+
 // Optional: Handle errors
 app.webhooks.onError((error) => {
   if (error.name === 'AggregateError') {
