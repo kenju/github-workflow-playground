@@ -100,6 +100,20 @@ async function createCheckRun({ octokit, payload, head_sha }) {
   });
 }
 
+async function rerequestCheckRun({ octokit, payload, check_run_id, status }) {
+  const owner = payload.repository.owner.login;
+  const repo = payload.repository.name;
+
+  return await octokit.request('POST /repos/{owner}/{repo}/check-runs/{check_run_id}/rerequest', {
+    owner,
+    repo,
+    check_run_id,
+    headers: {
+      'X-GitHub-Api-Version': '2022-11-28'
+    }
+  })
+}
+
 async function updateCheckRun({ octokit, payload, check_run_id, status }) {
   const owner = payload.repository.owner.login;
   const repo = payload.repository.name;
@@ -180,14 +194,20 @@ app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
         status: labelName,
       });
     } else if (labelName === 'queued') {
-      await updateCheckRunQueued({
+      await updateCheckRun({
         octokit,
         payload,
         check_run_id: checkRunID,
         status: labelName,
       });
-    } else if (labelName === 'rerequested') {
-      // TODO
+    } else if (labelName === 'rerequest') {
+      await rerequestCheckRun({
+        octokit,
+        payload,
+        check_run_id: checkRunID,
+      })
+    } else {
+      console.log('No label.')
     }
   } catch (error) {
     handleGithubEventError(error);
