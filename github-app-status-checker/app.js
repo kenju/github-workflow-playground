@@ -140,7 +140,7 @@ app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
       octokit,
       payload,
       head_sha: payload.pull_request.head.sha,
-      status: "queued",
+      status: "in_progress",
     });
     console.log(response)
   } catch (error) {
@@ -178,7 +178,7 @@ app.webhooks.on("check_suite", async ({ octokit, payload }) => {
         octokit,
         payload,
         head_sha,
-        status: "completed",
+        status: "queued",
       })
     } catch (error) {
       handleGithubEventError(error)
