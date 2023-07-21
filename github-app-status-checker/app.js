@@ -61,7 +61,7 @@ async function updateCommitStatus({
   sha,
   state = "success",
 }) {
-  await octokit.request("POST /repos/{owner}/{repo}/statuses/{sha}", {
+  return await octokit.request("POST /repos/{owner}/{repo}/statuses/{sha}", {
     owner: payload.repository.owner.login,
     repo: payload.repository.name,
     sha,
@@ -78,7 +78,7 @@ async function createCheckRun({ octokit, payload, head_sha, status }) {
   const owner = payload.repository.owner.login;
   const repo = payload.repository.name;
 
-  await octokit.request("POST /repos/{owner}/{repo}/check-runs", {
+  return await octokit.request("POST /repos/{owner}/{repo}/check-runs", {
     owner,
     repo,
     name: "GitHub Status Checker",
@@ -99,7 +99,7 @@ async function updateCheckRun({ octokit, payload, head_sha, status }) {
   const owner = payload.repository.owner.login;
   const repo = payload.repository.name;
 
-  await octokit.request("PATCH /repos/{owner}/{repo}/check-runs", {
+  return await octokit.request("PATCH /repos/{owner}/{repo}/check-runs", {
     owner,
     repo,
     name: "GitHub Status Checker",
