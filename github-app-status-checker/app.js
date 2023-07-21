@@ -101,6 +101,8 @@ app.webhooks.on("check_suite", async ({ octokit, payload }) => {
     const owner = payload.repository.owner.login
     const repo = payload.repository.name
     const head_sha = payload.check_suite ? payload.check_suite.head_sha : payload.check_run.head_sha
+    // queued / in_progress / completed
+    const status = 'queued'
     console.log(`Creating check run for ${owner}/${repo} (${head_sha})...`)
 
     try {
@@ -109,11 +111,11 @@ app.webhooks.on("check_suite", async ({ octokit, payload }) => {
       repo,
       name: "GitHub Status Checker",
       head_sha,
-      status: "in_progress",
+      status,
       output: {
         title: "Mighty Readme report",
-        summary: "",
-        text: "",
+        summary: "Summary comes here",
+        text: "Text comes here",
       },
       headers: {
         "X-GitHub-Api-Version": "2022-11-28",
