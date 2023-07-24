@@ -112,6 +112,19 @@ class GHAapp < Sinatra::Application
         @payload['check_run']['id'],
         status: 'completed',
         conclusion: 'success',
+        output: {
+          title: 'Octo Rubocop',
+          summary: '**Summary** comes here',
+          text: '**Text** comes here',
+          annotation: {
+            path: "/foo/bar.rb",
+          },
+          actions: [{
+            label: 'Fix this',
+            description: 'Automatically fix all linter notices',
+            identifier: 'fix_rubocop_notices',
+          }]
+        },
         accept: 'application/vnd.github+json'
       )
 
