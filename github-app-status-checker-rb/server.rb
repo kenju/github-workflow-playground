@@ -59,7 +59,19 @@ class GHAapp < Sinatra::Application
       if @payload['action'] == 'requested' || @payload['action'] == 'rerequested'
         create_check_run
       end
-      # ADD CHECK_RUN METHOD HERE #
+
+    when 'check_run'
+      # Check that the event is being sent to this app
+      if @payload['check_run']['app']['id'].to_s === APP_IDENTIFIER
+        case @payload['action']
+        when 'created'
+          initiate_check_run
+        when 'rerequested'
+          create_check_run
+        # ADD REQUESTED_ACTION METHOD HERE #
+        end
+      end
+
     end
 
 
@@ -71,19 +83,39 @@ class GHAapp < Sinatra::Application
     # Create a new check run with status "queued"
     def create_check_run
       @installation_client.create_check_run(
-        # [String, Integer, Hash, Octokit Repository object] A GitHub repository.
         @payload['repository']['full_name'],
-        # [String] The name of your check run.
         'Octo RuboCop',
-        # [String] The SHA of the commit to check
-        # The payload structure differs depending on whether a check run or a check suite event occurred.
         @payload['check_run'].nil? ? @payload['check_suite']['head_sha'] : @payload['check_run']['head_sha'],
-        # [Hash] 'Accept' header option, to avoid a warning about the API not being ready for production use.
         accept: 'application/vnd.github+json'
       )
     end
 
-    # ADD INITIATE_CHECK_RUN HELPER METHOD HERE #
+    # Start the CI process
+    def initiate_check_run
+      # Once the check run is created, you'll update the status of the check run
+      # to 'in_progress' and run the CI process. When the CI finishes, you'll
+      # update the check run status to 'completed' and add the CI results.
+
+      @installation_client.update_check_run(
+        @payload['repository']['full_name'],
+        @payload['check_run']['id'],
+        status: 'in_progress',
+        accept: 'application/vnd.github+json'
+      )
+
+      # ***** RUN A CI TEST *****
+      sleep 3
+
+      # Mark the check run as complete!
+      @installation_client.update_check_run(
+        @payload['repository']['full_name'],
+        @payload['check_run']['id'],
+        status: 'completed',
+        conclusion: 'success',
+        accept: 'application/vnd.github+json'
+      )
+
+    end
 
     # ADD CLONE_REPOSITORY HELPER METHOD HERE #
 
