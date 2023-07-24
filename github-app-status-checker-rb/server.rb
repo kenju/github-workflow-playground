@@ -85,13 +85,12 @@ class GHAapp < Sinatra::Application
     def create_check_run
       @installation_client.create_check_run(
         @payload['repository']['full_name'],
-        'Octo RuboCop',
+        'Status Check',
         @payload['check_run'].nil? ? @payload['check_suite']['head_sha'] : @payload['check_run']['head_sha'],
         accept: 'application/vnd.github+json'
       )
     end
 
-    # Start the CI process
     def initiate_check_run
       # Once the check run is created, you'll update the status of the check run
       # to 'in_progress' and run the CI process. When the CI finishes, you'll
@@ -111,22 +110,28 @@ class GHAapp < Sinatra::Application
       @installation_client.update_check_run(
         @payload['repository']['full_name'],
         @payload['check_run']['id'],
-        status: 'completed',
-        # conclusion: 'success',
+        # action_required, cancelled, failure, neutral, success, skipped, stale, timed_out
         conclusion: 'neutral',
         output: {
-          title: 'Octo Rubocop',
-          summary: '**Summary** comes here',
-          text: '**Text** comes here',
+          title: 'Status Check result',
+          summary: '**Summary** comes here.',
+          text: '**Text** comes here.',
           annotation: {
             path: "/foo/bar.rb",
           },
         },
-        actions: [{
-          label: 'Fix this',
-          description: 'Automatically fix all linter notices',
-          identifier: 'fix_rubocop_notices',
-        }],
+        actions: [
+          {
+            label: 'Turn on 💡',
+            description: 'Turn on the flag.',
+            identifier: 'turn_on',
+          },
+          {
+            label: 'Turn off 🔕',
+            description: 'Turn off the flag.',
+            identifier: 'turn_off',
+          },
+        ],
         accept: 'application/vnd.github+json'
       )
 
@@ -139,8 +144,11 @@ class GHAapp < Sinatra::Application
       repository     = @payload['repository']['name']
       head_branch    = @payload['check_run']['check_suite']['head_branch']
 
-      if (@payload['requested_action']['identifier'] == 'fix_rubocop_notices')
-        puts "Fix Rubocop notices"
+      identifier = @payload['requested_action']['identifier']
+      if identifier == 'turn_on'
+        puts "Turning on..."
+      elsif identifier == 'turn_off'
+        puts "Turning off..."
       end
     end
 
