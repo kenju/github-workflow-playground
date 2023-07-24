@@ -68,7 +68,8 @@ class GHAapp < Sinatra::Application
           initiate_check_run
         when 'rerequested'
           create_check_run
-        # ADD REQUESTED_ACTION METHOD HERE #
+        when 'requested_action'
+          take_requested_action
         end
       end
 
@@ -130,9 +131,18 @@ class GHAapp < Sinatra::Application
 
     end
 
-    # ADD CLONE_REPOSITORY HELPER METHOD HERE #
+    # Handles the check run `requested_action` event
+    # See /webhooks/event-payloads/#check_run
+    def take_requested_action
+      full_repo_name = @payload['repository']['full_name']
+      repository     = @payload['repository']['name']
+      head_branch    = @payload['check_run']['check_suite']['head_branch']
 
-    # ADD TAKE_REQUESTED_ACTION HELPER METHOD HERE #
+      if (@payload['requested_action']['identifier'] == 'fix_rubocop_notices')
+        puts "Fix Rubocop notices"
+      end
+    end
+
 
     # Saves the raw payload and converts the payload to JSON format
     def get_payload_request(request)
