@@ -67,6 +67,8 @@ class GHAapp < Sinatra::Application
       end
 
     when 'check_run'
+      # https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads
+
       # Check that the event is being sent to this app
       if @payload['check_run']['app']['id'].to_s === APP_IDENTIFIER
         case @payload['action']
@@ -121,7 +123,7 @@ class GHAapp < Sinatra::Application
         @payload['repository']['full_name'],
         @payload['check_run']['id'],
         # HACK: pass conclusion variables via title
-        conclusion: @payload['check_run']['title'],
+        conclusion: @payload['check_run']['name'],
         output: {
           title: 'Status Check result',
           summary: '**Summary** comes here.',
