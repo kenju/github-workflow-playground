@@ -104,14 +104,17 @@ async function rerequestCheckRun({ octokit, payload, check_run_id, status }) {
   const owner = payload.repository.owner.login;
   const repo = payload.repository.name;
 
-  return await octokit.request('POST /repos/{owner}/{repo}/check-runs/{check_run_id}/rerequest', {
-    owner,
-    repo,
-    check_run_id,
-    headers: {
-      'X-GitHub-Api-Version': '2022-11-28'
+  return await octokit.request(
+    "POST /repos/{owner}/{repo}/check-runs/{check_run_id}/rerequest",
+    {
+      owner,
+      repo,
+      check_run_id,
+      headers: {
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
     }
-  })
+  );
 }
 
 async function updateCheckRun({ octokit, payload, check_run_id, status }) {
@@ -178,7 +181,7 @@ app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
 });
 
 app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
-  const labelName = payload.label.name
+  const labelName = payload.label.name;
   let checkRunID = database.check_run_id;
 
   try {
@@ -186,28 +189,37 @@ app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
       checkRunID = await upsertCheckRunID({ octokit, payload });
     }
 
-    if (labelName === 'in_progress') {
+    if (labelName === "in_progress") {
       await updateCheckRun({
         octokit,
         payload,
         check_run_id: checkRunID,
         status: labelName,
       });
-    } else if (labelName === 'queued') {
+    } else if (labelName === "queued") {
       await updateCheckRun({
         octokit,
         payload,
         check_run_id: checkRunID,
         status: labelName,
       });
-    } else if (labelName === 'rerequest') {
+    } else if (labelName === "rerequest") {
       await rerequestCheckRun({
         octokit,
         payload,
         check_run_id: checkRunID,
-      })
+      });
+    } else if (labelName === "create_check_run") {
+      const head_sha = payload.pull_request.head.sha;
+      const response = await createCheckRun({
+        octokit,
+        payload,
+        head_sha,
+      });
+      database.checkRunID = response.data.id;
     } else {
-      console.log('No label.')
+      //TODO: error handling
+      console.error("No label.");
     }
   } catch (error) {
     handleGithubEventError(error);

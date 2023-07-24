@@ -4,6 +4,13 @@ Originally from this [Quickstart](https://docs.github.com/en/apps/creating-githu
 
 ## Development
 
+Create .env file and fill in credentials:
+
+```
+cp .env.sample .env
+vim .env
+```
+
 In the first terminal, start proxying via smee.io:
 
 ```
