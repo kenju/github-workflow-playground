@@ -11,10 +11,11 @@ require 'logger'        # Logs debug statements
 #   1. Because the app will require a landing page for installation.
 #   2. To easily handle webhook events.
 
-# Supported parameters for "conclusion" field of Check Run
+# Supported parameters for "conclusion" field of Check Run, except for "stale"
+# You cannot change a check run conclusion to stale, only GitHub can set this.
 # https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#create-a-check-run--parameters
 CHECK_RUN_CONCLUSIONS = %w(
-  action_required cancelled failure neutral success skipped stale timed_out
+  action_required cancelled failure neutral success skipped timed_out
 )
 
 class GHAapp < Sinatra::Application
@@ -83,7 +84,6 @@ class GHAapp < Sinatra::Application
 
     end
 
-
     200 # success status
   end
 
@@ -128,6 +128,18 @@ class GHAapp < Sinatra::Application
           title: 'Status Check result',
           summary: '**Summary** comes here.',
           text: '**Text** comes here.',
+          images: [
+            {
+              alt: "celebrate image",
+              image_url: "https://burst.shopifycdn.com/photos/sparkler-lit-and-burning.jpg?width=925&format=pjpg&exif=1&iptc=1",
+              caption: "image from burst.shopify.com",
+            },
+            {
+              alt: "coffee image",
+              image_url: "https://burst.shopifycdn.com/photos/lenses-lattes.jpg?width=925&format=pjpg&exif=1&iptc=1",
+              caption: "image from burst.shopify.com",
+            },
+          ]
         },
         actions: [
           {
