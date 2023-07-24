@@ -14,7 +14,7 @@ vim .env
 In the first terminal, start proxying via smee.io:
 
 ```
-npx smee --url https://smee.io/J5MWafNKXAczwvTh -t http://localhost:3000/api/webhook
+npx smee --url YOUR_DOMAIN -t http://localhost:3000/api/webhook
 ```
 
 In the second terminal, launch a local server process:
