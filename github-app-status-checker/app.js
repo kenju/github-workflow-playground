@@ -15,6 +15,10 @@ const secret = process.env.WEBHOOK_SECRET;
 const enterpriseHostname = process.env.ENTERPRISE_HOSTNAME;
 const messageForNewPRs = fs.readFileSync("./message.md", "utf8");
 
+const metadata = {
+  appName: "GitHub Status Checker",
+};
+
 const database = {
   checkRunID: undefined, // TODO: adding default value
 };
@@ -36,15 +40,6 @@ const app = new App({
 // Optional: Get & log the authenticated app's name
 const { data } = await app.octokit.request("/app");
 
-async function postMessageForPRs({ octokit, payload }) {
-  await octokit.rest.issues.createComment({
-    owner: payload.repository.owner.login,
-    repo: payload.repository.name,
-    issue_number: payload.pull_request.number,
-    body: messageForNewPRs,
-  });
-}
-
 function handleGithubEventError(error) {
   if (error.response) {
     console.error(
@@ -55,6 +50,18 @@ function handleGithubEventError(error) {
   }
 }
 
+async function postMessageForPRs({ octokit, payload }) {
+  await octokit.rest.issues.createComment({
+    owner: payload.repository.owner.login,
+    repo: payload.repository.name,
+    issue_number: payload.pull_request.number,
+    body: messageForNewPRs,
+  });
+}
+
+// Upsert Check Run ID to database.
+// This is useful only for local development, in case you already create a new check run
+// and launch a local server.
 async function upsertCheckRunID({ octokit, payload }) {
   const owner = payload.repository.owner.login;
   const repo = payload.repository.name;
@@ -86,13 +93,13 @@ async function createCheckRun({ octokit, payload, head_sha }) {
   return await octokit.request("POST /repos/{owner}/{repo}/check-runs", {
     owner,
     repo,
-    name: "GitHub Status Checker",
+    name: metadata.appName,
     head_sha,
     status: "queued",
     output: {
-      title: "Mighty Readme report",
-      summary: "Summary comes here",
-      text: "Text comes here",
+      title: "Status Check created 🎉",
+      summary: "A new status check report created.",
+      text: "Check [the API docs](https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28) for more details.",
     },
     headers: {
       "X-GitHub-Api-Version": "2022-11-28",
@@ -129,9 +136,9 @@ async function updateCheckRun({ octokit, payload, check_run_id, status }) {
       check_run_id,
       status,
       output: {
-        title: "Mighty Readme report",
-        summary: "Summary comes here",
-        text: "Text comes here",
+        title: "Status Check updated 🚧",
+        summary: `A new status check report updated: ${status}.`,
+        text: "Check [the API docs](https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28) for more details.",
       },
       headers: {
         "X-GitHub-Api-Version": "2022-11-28",
@@ -154,9 +161,9 @@ async function updateCheckRunCompleted({ octokit, payload, check_run_id }) {
       // Can be one of: action_required, cancelled, failure, neutral, success, skipped, stale, timed_out
       conclusion: "success", // required when completed
       output: {
-        title: "Mighty Readme report",
-        summary: "Summary comes here",
-        text: "Text comes here",
+        title: "Status Check completed ✅",
+        summary: `A new status check report completed.`,
+        text: "Check [the API docs](https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28) for more details.",
       },
       headers: {
         "X-GitHub-Api-Version": "2022-11-28",
@@ -217,22 +224,16 @@ app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
         head_sha,
       });
       database.checkRunID = response.data.id;
-    } else {
-      //TODO: error handling
-      console.error("No label.");
-    }
-  } catch (error) {
-    handleGithubEventError(error);
-  }
-});
-
-app.webhooks.on("pull_request.unlabeled", async ({ octokit, payload }) => {
-  try {
+    } else if (labelName === "complete_check_run") {
     await updateCheckRunCompleted({
       octokit,
       payload,
       check_run_id: database.checkRunID,
     });
+    } else {
+      //TODO: error handling
+      console.error("No label.");
+    }
   } catch (error) {
     handleGithubEventError(error);
   }
