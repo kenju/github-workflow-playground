@@ -11,6 +11,12 @@ require 'logger'        # Logs debug statements
 #   1. Because the app will require a landing page for installation.
 #   2. To easily handle webhook events.
 
+# Supported parameters for "conclusion" field of Check Run
+# https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#create-a-check-run--parameters
+CHECK_RUN_CONCLUSIONS = %w(
+  action_required cancelled failure neutral success skipped stale timed_out
+)
+
 class GHAapp < Sinatra::Application
 
   # Sets the port that's used when starting the web server.
@@ -83,12 +89,15 @@ class GHAapp < Sinatra::Application
 
     # Create a new check run with status "queued"
     def create_check_run
-      @installation_client.create_check_run(
-        @payload['repository']['full_name'],
-        'Status Check',
-        @payload['check_run'].nil? ? @payload['check_suite']['head_sha'] : @payload['check_run']['head_sha'],
-        accept: 'application/vnd.github+json'
-      )
+      # NOTE: N+1 API calls
+      CHECK_RUN_CONCLUSIONS.each {|conclusion|
+        @installation_client.create_check_run(
+          @payload['repository']['full_name'],
+          "Status Check (#{conclusion})",
+          @payload['check_run'].nil? ? @payload['check_suite']['head_sha'] : @payload['check_run']['head_sha'],
+          accept: 'application/vnd.github+json'
+        )
+      }
     end
 
     def initiate_check_run
