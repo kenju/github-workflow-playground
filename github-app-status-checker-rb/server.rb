@@ -93,7 +93,8 @@ class GHAapp < Sinatra::Application
       CHECK_RUN_CONCLUSIONS.each {|conclusion|
         @installation_client.create_check_run(
           @payload['repository']['full_name'],
-          "Status Check (#{conclusion})",
+          # HACK: pass conclusion variables via title
+          conclusion,
           @payload['check_run'].nil? ? @payload['check_suite']['head_sha'] : @payload['check_run']['head_sha'],
           accept: 'application/vnd.github+json'
         )
@@ -119,15 +120,12 @@ class GHAapp < Sinatra::Application
       @installation_client.update_check_run(
         @payload['repository']['full_name'],
         @payload['check_run']['id'],
-        # action_required, cancelled, failure, neutral, success, skipped, stale, timed_out
-        conclusion: 'neutral',
+        # HACK: pass conclusion variables via title
+        conclusion: @payload['check_run']['title'],
         output: {
           title: 'Status Check result',
           summary: '**Summary** comes here.',
           text: '**Text** comes here.',
-          annotation: {
-            path: "/foo/bar.rb",
-          },
         },
         actions: [
           {
