@@ -112,7 +112,8 @@ class GHAapp < Sinatra::Application
         @payload['repository']['full_name'],
         @payload['check_run']['id'],
         status: 'completed',
-        conclusion: 'success',
+        # conclusion: 'success',
+        conclusion: 'neutral',
         output: {
           title: 'Octo Rubocop',
           summary: '**Summary** comes here',
@@ -120,12 +121,12 @@ class GHAapp < Sinatra::Application
           annotation: {
             path: "/foo/bar.rb",
           },
-          actions: [{
-            label: 'Fix this',
-            description: 'Automatically fix all linter notices',
-            identifier: 'fix_rubocop_notices',
-          }]
         },
+        actions: [{
+          label: 'Fix this',
+          description: 'Automatically fix all linter notices',
+          identifier: 'fix_rubocop_notices',
+        }],
         accept: 'application/vnd.github+json'
       )
 
